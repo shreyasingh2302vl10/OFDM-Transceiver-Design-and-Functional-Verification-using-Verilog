@@ -6,21 +6,11 @@
 
 module tb_ofdm_top;
 
-    // -------------------------------------------------------------
-    // Testbench Clock & Reset Signals
-    // -------------------------------------------------------------
     reg        clk;
     reg        rst_n;
-
-    // -------------------------------------------------------------
-    // Transmitter Inputs
-    // -------------------------------------------------------------
     reg        tx_data_in;
     reg        tx_valid_in;
 
-    // -------------------------------------------------------------
-    // Top Module Outputs
-    // -------------------------------------------------------------
     wire [15:0] tx_ifft_out_tdata;
     wire        tx_ifft_out_tvalid;
     wire        tx_ifft_out_tlast;
@@ -32,72 +22,62 @@ module tb_ofdm_top;
     wire [7:0]  rx_fft_I_out;
     wire [7:0]  rx_fft_Q_out;
 
-    // -------------------------------------------------------------
-    // Unit Under Test (UUT) Instance
-    // -------------------------------------------------------------
+    // --- Demapper Signals ---
+    wire [7:0]  mapped_I_out;
+    wire [7:0]  mapped_Q_out;
+    wire [1:0]  rx_demap_2bit_out; // Updated 2-bit wire
+    wire        rx_demap_valid;
+
+    // Unit Under Test (UUT)
     ofdm_top uut (
         .clk                 (clk),
         .rst_n               (rst_n),
-        
-        // Tx Inputs
         .tx_data_in          (tx_data_in),
         .tx_valid_in         (tx_valid_in),
-        
-        // Tx IFFT Outputs
         .tx_ifft_out_tdata   (tx_ifft_out_tdata),
         .tx_ifft_out_tvalid  (tx_ifft_out_tvalid),
         .tx_ifft_out_tlast   (tx_ifft_out_tlast),
-        
-        // Rx FFT Outputs
         .rx_fft_out_tdata    (rx_fft_out_tdata),
         .rx_fft_out_tvalid   (rx_fft_out_tvalid),
         .rx_fft_out_tlast    (rx_fft_out_tlast),
-        
-        // Parsed I/Q Outputs from Receiver
         .rx_fft_I_out        (rx_fft_I_out),
-        .rx_fft_Q_out        (rx_fft_Q_out)
+        .rx_fft_Q_out        (rx_fft_Q_out),
+
+        .mapped_I_out        (mapped_I_out),
+        .mapped_Q_out        (mapped_Q_out),
+        .rx_demap_2bit_out   (rx_demap_2bit_out), // Port mapped to 2-bit
+        .rx_demap_valid     (rx_demap_valid)
     );
 
-    // -------------------------------------------------------------
-    // 100 MHz Clock (10ns Period)
-    // -------------------------------------------------------------
     always #5 clk = ~clk;
 
     integer i;
-    // Test Stream: Exact 16 bits = 8 QPSK Symbols (1 Frame for 8-point IFFT/FFT)
-    reg [15:0] test_bits = 16'b10_00_10_11_11_11_11_11;
+    reg [15:0] test_bits = 16'b10_11_10_01_00_10_01_10;
 
-    // -------------------------------------------------------------
-    // Stimulus Generation
-    // -------------------------------------------------------------
     initial begin
         clk         = 0;
         rst_n       = 0;
         tx_data_in  = 0;
         tx_valid_in = 0;
 
-        // Reset Pulse
         #50;
         rst_n = 1;
         #20;
 
         $display("\n=======================================================");
-        $display("   STARTING TOP OFDM (TX IFFT + RX FFT) SIMULATION ");
+        $display("   STARTING TOP OFDM (TX IFFT + RX FFT + DEMAP) SIM");
         $display("=======================================================\n");
 
-        // Drive 16 bits serially on posedge clk
         for (i = 15; i >= 0; i = i - 1) begin
             @(posedge clk);
             tx_data_in  <= test_bits[i];
             tx_valid_in <= 1'b1;
         end
 
-        // Clear input valid after sending frame
         @(posedge clk);
-        tx_valid_in <= 1'b0;
         tx_data_in  <= 1'b0;
+        tx_valid_in <= 1'b0;
 
-        // Wait for both IFFT and FFT IP Core pipeline latencies
         #2500;
         $display("\n=======================================================");
         $display("   SIMULATION FINISHED ");
@@ -105,31 +85,17 @@ module tb_ofdm_top;
         $finish;
     end
 
-    // -------------------------------------------------------------
-    // Transmitter IFFT Output Monitor
-    // -------------------------------------------------------------
     always @(posedge clk) begin
-        if (tx_ifft_out_tvalid) begin
-            $display("[TX IFFT OUT] Time: %0t ns | Real [7:0]: %d | Imag [15:8]: %d | Last: %b", 
+        if (rx_demap_valid) begin
+            $display("[DEMAP OUT] Time: %0t ns | Mapped (+8/-8): (I=%d, Q=%d) | Decoded 2-Bit Symbol: %b", 
                      $time, 
-                     $signed(tx_ifft_out_tdata[7:0]), 
-                     $signed(tx_ifft_out_tdata[15:8]), 
-                     tx_ifft_out_tlast);
+                     $signed(mapped_I_out), 
+                     $signed(mapped_Q_out), 
+                     rx_demap_2bit_out);
         end
     end
 
-    // -------------------------------------------------------------
-    // Receiver FFT Output Monitor
-    // -------------------------------------------------------------
-    always @(posedge clk) begin
-        if (rx_fft_out_tvalid) begin
-            $display("[RX FFT  OUT] Time: %0t ns | Real_I: %d | Imag_Q: %d | Last: %b", 
-                     $time, 
-                     $signed(rx_fft_I_out), 
-                     $signed(rx_fft_Q_out), 
-                     rx_fft_out_tlast);
-        end
-    end
+endmodule
 ```
 # INPUT
 ![image](https://github.com/shreyasingh2302vl10/FPGA-Based-Hybrid-Quantum-OFDM-Communication-System/blob/39d9ce4e0652a90e04abe3ea82ab185ccafc4d52/Transmitter.png
