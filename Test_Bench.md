@@ -52,17 +52,17 @@ module tb_ofdm_top;
     always #5 clk = ~clk;
 
     integer i;
-    reg [15:0] test_bits = 16'b10_11_10_01_00_10_01_10;
+    reg [15:0] test_bits = 16'b10_11_10_01_10_11_00_11;
 
-    initial begin
+    initial begin    
         clk         = 0;
         rst_n       = 0;
         tx_data_in  = 0;
         tx_valid_in = 0;
-
-        #50;
+    
+        #200;          // let's end it
         rst_n = 1;
-        #20;
+        #100;
 
         $display("\n=======================================================");
         $display("   STARTING TOP OFDM (TX IFFT + RX FFT + DEMAP) SIM");
