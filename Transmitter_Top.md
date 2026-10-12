@@ -28,7 +28,7 @@ module transmitter_top (
 
     // Config TDATA for Xilinx FFT IP Core (8-bit width)
     // 8'h00 -> Inverse FFT (IFFT), 8'h01 -> Forward FFT
-    wire [7:0] w_config_tdata = 8'h00; 
+    // wire [7:0] w_config_tdata = 8'h00; 
     wire       w_config_tready;
 
     // Assign Top Level QPSK Outputs
@@ -66,6 +66,7 @@ module transmitter_top (
     // -------------------------------------------------------------
     // 3. Xilinx FFT IP Core Instance (IFFT)
     // -------------------------------------------------------------
+    wire [7:0] w_config_tdata = 8'h00; 
     xfft_0 u_ifft (
         .aclk                        (clk),
         
